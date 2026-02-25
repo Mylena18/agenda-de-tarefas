@@ -33,7 +33,7 @@
   ```
 - **Start Command**: 
   ```
-  cd backend && gunicorn setup.wsgi --log-file -
+  cd backend && gunicorn setup.wsgi
   ```
 
 #### Environment Variables:
