@@ -6,21 +6,33 @@ function TarefaForm({ onAdicionar }) {
   const [descricao, setDescricao] = useState('')
   const [data, setData] = useState('')
   const [hora, setHora] = useState('')
+  const [alarmeAtivo, setAlarmeAtivo] = useState(false)
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     
-    if (!titulo.trim()) return
+    if (!titulo.trim()) {
+      console.warn('⚠️ Título vazio')
+      return
+    }
 
+    console.log('📝 Enviando formulário...', { titulo, descricao, data, hora, alarmeAtivo })
     setLoading(true)
     try {
-      await onAdicionar(titulo, descricao, data, hora)
+      console.log('⏳ Chamando onAdicionar...')
+      await onAdicionar(titulo, descricao, data, hora, alarmeAtivo)
+      
+      console.log('✅ Tarefa adicionada! Limpando formulário...')
       setTitulo('')
       setDescricao('')
       setData('')
       setHora('')
+      setAlarmeAtivo(false)
+    } catch (err) {
+      console.error('❌ Erro no formulário:', err)
     } finally {
+      console.log('🔚 Finalizando...')
       setLoading(false)
     }
   }
@@ -94,12 +106,22 @@ function TarefaForm({ onAdicionar }) {
           </div>
         </div>
 
-        {/* Botão Submit */}
-        <button 
-          type="submit" 
-          className="form-submit-btn"
-          disabled={loading || !titulo.trim()}
-        >
+        {/* Alarme */}
+        <div className="form-group checkbox-group">
+          <label htmlFor="alarme">
+            <input
+              id="alarme"
+              type="checkbox"
+              checked={alarmeAtivo}
+              onChange={(e) => setAlarmeAtivo(e.target.checked)}
+              disabled={loading}
+            />
+            <span>Ativar alarme para esta tarefa</span>
+          </label>
+        </div>
+
+        {/* Submit */}
+        <button type="submit" className="form-submit" disabled={loading}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M12 5v14M5 12h14"/>
           </svg>

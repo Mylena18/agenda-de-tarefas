@@ -4,6 +4,8 @@ import './App.css'
 import Login from './components/Login'
 import TarefaForm from './components/TarefaForm'
 import TarefaList from './components/TarefaList'
+import Calendar from './components/Calendar'
+import Profile from './components/Profile'
 
 const API_BASE_URL = 'http://127.0.0.1:8000/api/'
 
@@ -12,7 +14,9 @@ function App() {
   const [token, setToken] = useState(null)
   const [tarefas, setTarefas] = useState([])
   const [carregando, setCarregando] = useState(false)
+  const [adicionandoTarefa, setAdicionandoTarefa] = useState(false)
   const [erro, setErro] = useState(null)
+  const [abaAtiva, setAbaAtiva] = useState('home') // home, calendar, profile
 
   // Verificar se há token armazenado
   useEffect(() => {
@@ -22,41 +26,79 @@ function App() {
     if (savedToken && savedUser) {
       setToken(savedToken)
       setUsuario(JSON.parse(savedUser))
+      // Configurar axios com token
       axios.defaults.headers.common['Authorization'] = `Token ${savedToken}`
+      axios.defaults.headers.common['Content-Type'] = 'application/json'
       carregarTarefas(savedToken)
     }
   }, [])
 
+  // Log quando a aba ativa muda
+  useEffect(() => {
+    console.log('📍 Aba ativa mudou para:', abaAtiva)
+  }, [abaAtiva])
+
   const carregarTarefas = async (authToken) => {
     try {
       setCarregando(true)
+      setErro(null)
       const res = await axios.get(`${API_BASE_URL}tarefas/`, {
         headers: { Authorization: `Token ${authToken}` }
       })
-      setTarefas(res.data)
-      setErro(null)
+      console.log('Tarefas carregadas:', res.data)
+      setTarefas(Array.isArray(res.data) ? res.data : [])
     } catch (err) {
+      console.error('Erro ao carregar tarefas:', err.response?.status, err.response?.data, err.message)
       setErro('Erro ao carregar tarefas')
-      console.error(err)
     } finally {
       setCarregando(false)
     }
   }
 
-  const adicionarTarefa = async (titulo, descricao, data, hora) => {
+  const adicionarTarefa = async (titulo, descricao, data, hora, alarmeAtivo) => {
     try {
-      const res = await axios.post(`${API_BASE_URL}tarefas/`, {
+      console.log('🚀 Iniciando adição de tarefa...', { titulo, descricao, data, hora, alarmeAtivo })
+      
+      setAdicionandoTarefa(true)
+      
+      const payload = {
         titulo,
         descricao,
         data_agendada: data || null,
         hora_agendada: hora || null,
+        alarme_ativo: alarmeAtivo || false,
         concluida: false
-      })
+      }
+      
+      console.log('📤 Enviando payload:', payload)
+      
+      const res = await axios.post(`${API_BASE_URL}tarefas/`, payload)
+      
+      console.log('✅ Tarefa adicionada com sucesso:', res.data)
       setTarefas([...tarefas, res.data])
       setErro(null)
+      setAdicionandoTarefa(false)
+      return res.data
     } catch (err) {
-      setErro('Erro ao adicionar tarefa')
-      console.error(err)
+      console.error('❌ Erro ao adicionar tarefa:')
+      console.error('   Status:', err.response?.status)
+      console.error('   Data:', err.response?.data)
+      console.error('   Message:', err.message)
+      
+      const errorMsg = err.response?.data?.detail || 
+                       err.response?.data?.error ||
+                       err.response?.data?.titulo?.[0] || 
+                       'Erro ao adicionar tarefa'
+      
+      console.error('📢 Mensagem de erro:', errorMsg)
+      setErro(errorMsg)
+      setAdicionandoTarefa(false)
+      
+      // Manter erro visível por mais tempo
+      setTimeout(() => {
+        console.log('🔄 Limpando erro')
+        setErro(null)
+      }, 10000)
     }
   }
 
@@ -104,101 +146,148 @@ function App() {
 
   const tarefasPendentes = tarefas.filter(t => !t.concluida)
   const tarefasConcluidas = tarefas.filter(t => t.concluida)
+  
+  // Tarefas do dia
+  const hoje = new Date().toISOString().split('T')[0]
+  const tarefasHoje = tarefas.filter(t => t.data_agendada === hoje && !t.concluida)
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      {/* Background Decoration */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-purple-600 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-blue-600 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-pink-600 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-4000"></div>
-      </div>
-
-      <div className="fixed inset-0 bg-gradient-to-b from-slate-900/80 via-transparent to-slate-900/80 pointer-events-none"></div>
-
-      <div className="relative z-10 flex flex-col min-h-screen">
-        {/* Header */}
-        <header className="sticky top-0 z-50 backdrop-blur-xl bg-slate-900/50 border-b border-white/10 shadow-2xl">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2 sm:gap-4">
-                <div className="p-2.5 sm:p-3 bg-gradient-to-br from-purple-500 via-pink-500 to-purple-500 rounded-xl sm:rounded-2xl shadow-lg">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white">
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                    <path d="M16 2v4M8 2v4M3 10h18"/>
-                  </svg>
-                </div>
-                <div>
-                  <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-purple-300 via-pink-300 to-purple-300 bg-clip-text text-transparent">
-                    Agenda
-                  </h1>
-                  <p className="text-xs sm:text-sm text-purple-200/70">Bem-vindo, {usuario?.username}</p>
-                </div>
-              </div>
-
-              <button
-                onClick={handleLogout}
-                className="px-4 py-2 rounded-lg font-semibold text-sm bg-red-500/30 text-red-200 border border-red-400/50 hover:bg-red-500/50 transition-all duration-300"
-              >
-                Sair
-              </button>
+    <div className="app-container">
+      {/* Header */}
+      <header className="app-header">
+        <div className="header-content">
+          <div className="header-brand">
+            <div className="brand-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
+              </svg>
+            </div>
+            <div>
+              <h1>Agenda</h1>
+              <p>Bem-vindo, {usuario?.first_name || usuario?.email}</p>
             </div>
           </div>
-        </header>
+          <button onClick={handleLogout} className="logout-btn">Sair</button>
+        </div>
+      </header>
 
-        {/* Main Content */}
-        <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12">
-          {erro && (
-            <div className="mb-6 sm:mb-8 p-4 sm:p-6 bg-red-500/20 border border-red-500/50 rounded-xl sm:rounded-2xl text-red-200 backdrop-blur-sm animate-slideUp">
-              <div className="flex items-start gap-3 sm:gap-4">
-                <span className="text-xl sm:text-2xl flex-shrink-0 mt-0.5">!</span>
-                <div>
-                  <h3 className="font-semibold sm:text-lg">{erro}</h3>
+      {/* Navigation Tabs */}
+      <nav className="app-tabs">
+        <button 
+          className={`tab-btn ${abaAtiva === 'home' ? 'active' : ''}`}
+          onClick={() => setAbaAtiva('home')}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+          Início
+        </button>
+        <button 
+          className={`tab-btn ${abaAtiva === 'calendar' ? 'active' : ''}`}
+          onClick={() => setAbaAtiva('calendar')}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
+          </svg>
+          Calendário
+        </button>
+        <button 
+          className={`tab-btn ${abaAtiva === 'profile' ? 'active' : ''}`}
+          onClick={() => setAbaAtiva('profile')}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+          Perfil
+        </button>
+      </nav>
+
+      {/* Main Content */}
+      <main className="app-main">
+        {erro && (
+          <div className="error-banner">
+            <span>⚠</span>
+            <p>{erro}</p>
+          </div>
+        )}
+
+        {abaAtiva === 'home' && (
+          <div className="tab-content">
+            <TarefaForm onAdicionar={adicionarTarefa} />
+            
+            {carregando ? (
+              <div className="loading-state">
+                <p>Carregando suas tarefas...</p>
+              </div>
+            ) : tarefasHoje.length > 0 ? (
+              <div className="today-section">
+                <h2>Tarefas para hoje</h2>
+                <div className="today-tasks">
+                  {tarefasHoje.map(t => (
+                    <div key={t.id} className="today-item">
+                      <input 
+                        type="checkbox" 
+                        checked={t.concluida}
+                        onChange={() => atualizarTarefa(t.id, { concluida: !t.concluida })}
+                        className="task-checkbox"
+                      />
+                      <div className="task-info">
+                        <h3>{t.titulo}</h3>
+                        {t.hora_agendada && <p className="task-time">{t.hora_agendada}</p>}
+                        {t.alarme_ativo && <span className="alarm-badge">Alarme</span>}
+                      </div>
+                      <button 
+                        onClick={() => deletarTarefa(t.id)}
+                        className="delete-btn"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </div>
-            </div>
-          )}
-
-          <TarefaForm onAdicionar={adicionarTarefa} />
-
-          {carregando ? (
-            <div className="text-center py-12 sm:py-24 mt-8 sm:mt-12">
-              <div className="inline-block">
-                <div className="text-5xl sm:text-7xl mb-4">↻</div>
+            ) : (
+              <div className="empty-state">
+                <div className="empty-icon">✓</div>
+                <h2>Nenhuma tarefa para hoje!</h2>
+                <p>Todas as suas tarefas estão em dia</p>
               </div>
-              <p className="text-purple-200/80 text-sm sm:text-lg mt-4">Carregando suas tarefas...</p>
-            </div>
-          ) : tarefas.length === 0 ? (
-            <div className="text-center py-12 sm:py-24 mt-8 sm:mt-12">
-              <div className="text-6xl sm:text-8xl mb-4 sm:mb-6 animate-float">✓</div>
-              <h2 className="text-2xl sm:text-4xl font-bold text-white mb-2 sm:mb-4">Tudo pronto!</h2>
-              <p className="text-purple-200/80 text-sm sm:text-lg max-w-md mx-auto leading-relaxed">
-                Você não tem tarefas pendentes. Crie uma nova para começar!
-              </p>
-            </div>
-          ) : (
-            <div className="mt-8 sm:mt-12 animate-slideUp">
-              <TarefaList
-                tarefas={tarefas}
-                tarefasPendentes={tarefasPendentes}
-                tarefasConcluidas={tarefasConcluidas}
-                onAtualizar={atualizarTarefa}
-                onDeletar={deletarTarefa}
-              />
-            </div>
-          )}
-        </main>
+            )}
 
-        {/* Footer */}
-        <footer className="relative z-10 mt-auto py-6 sm:py-8 px-4 sm:px-6 border-t border-white/10">
-          <div className="max-w-6xl mx-auto text-center">
-            <p className="text-xs sm:text-sm text-purple-300/60">
-              Agenda pessoal • Desenvolvido para melhorar sua produtividade
-            </p>
+            {tarefasPendentes.length > 0 && (
+              <div className="all-tasks-section">
+                <h2>Todas as tarefas</h2>
+                <TarefaList
+                  tarefas={tarefas}
+                  tarefasPendentes={tarefasPendentes}
+                  tarefasConcluidas={tarefasConcluidas}
+                  onAtualizar={atualizarTarefa}
+                  onDeletar={deletarTarefa}
+                />
+              </div>
+            )}
           </div>
-        </footer>
-      </div>
-    </div>
+        )}
+
+        {abaAtiva === 'calendar' && (
+          <div className="tab-content calendar-content">
+            <Calendar tarefas={tarefas} />
+          </div>
+        )}
+
+        {abaAtiva === 'profile' && (
+          <div className="tab-content profile-content">
+            <Profile usuario={usuario} onLogout={handleLogout} />
+          </div>
+        )}
+      </main>
+
+      {/* Footer */}
+      <footer className="app-footer">
+        <p>Agenda pessoal • Desenvolvido para melhorar sua produtividade</p>
+      </footer>    </div>
   )
 }
 

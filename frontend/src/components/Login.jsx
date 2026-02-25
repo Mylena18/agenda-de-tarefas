@@ -7,8 +7,8 @@ function Login({ onLoginSuccess }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [formData, setFormData] = useState({
-    username: '',
     email: '',
+    first_name: '',
     password: ''
   })
 
@@ -17,21 +17,40 @@ function Login({ onLoginSuccess }) {
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
+  const validateForm = () => {
+    if (!formData.email || !formData.password) {
+      setError('Email e senha são obrigatórios')
+      return false
+    }
+    if (formData.password.length < 4) {
+      setError('Senha deve ter pelo menos 4 caracteres')
+      return false
+    }
+    if (!isLogin && !formData.first_name) {
+      setError('Nome é obrigatório')
+      return false
+    }
+    return true
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setLoading(true)
     setError(null)
+
+    if (!validateForm()) return
+
+    setLoading(true)
 
     try {
       const endpoint = isLogin 
         ? 'http://127.0.0.1:8000/api/auth/login/'
         : 'http://127.0.0.1:8000/api/auth/register/'
 
-      const response = await axios.post(endpoint, {
-        username: formData.username,
-        email: formData.email,
-        password: formData.password
-      })
+      const payload = isLogin 
+        ? { email: formData.email, password: formData.password }
+        : { email: formData.email, password: formData.password, first_name: formData.first_name }
+
+      const response = await axios.post(endpoint, payload)
 
       if (response.data.token) {
         localStorage.setItem('token', response.data.token)
@@ -39,7 +58,8 @@ function Login({ onLoginSuccess }) {
         onLoginSuccess(response.data.user, response.data.token)
       }
     } catch (err) {
-      setError(err.response?.data?.error || 'Erro ao processar requisição')
+      const errorMsg = err.response?.data?.error || 'Erro ao processar requisição'
+      setError(errorMsg)
     } finally {
       setLoading(false)
     }
@@ -74,14 +94,14 @@ function Login({ onLoginSuccess }) {
           {/* Formulário */}
           <form onSubmit={handleSubmit} className="login-form">
             <div className="form-group">
-              <label htmlFor="username">Usuário</label>
+              <label htmlFor="email">Email</label>
               <input
-                id="username"
-                type="text"
-                name="username"
-                value={formData.username}
+                id="email"
+                type="email"
+                name="email"
+                value={formData.email}
                 onChange={handleChange}
-                placeholder="seu_usuario"
+                placeholder="seu@email.com"
                 required
                 disabled={loading}
               />
@@ -89,21 +109,21 @@ function Login({ onLoginSuccess }) {
 
             {!isLogin && (
               <div className="form-group">
-                <label htmlFor="email">Email</label>
+                <label htmlFor="first_name">Nome</label>
                 <input
-                  id="email"
-                  type="email"
-                  name="email"
-                  value={formData.email}
+                  id="first_name"
+                  type="text"
+                  name="first_name"
+                  value={formData.first_name}
                   onChange={handleChange}
-                  placeholder="seu@email.com"
+                  placeholder="Seu nome"
                   disabled={loading}
                 />
               </div>
             )}
 
             <div className="form-group">
-              <label htmlFor="password">Senha</label>
+              <label htmlFor="password">Senha (mínimo 4 caracteres)</label>
               <input
                 id="password"
                 type="password"
@@ -134,11 +154,10 @@ function Login({ onLoginSuccess }) {
                 onClick={() => {
                   setIsLogin(!isLogin)
                   setError(null)
-                  setFormData({ username: '', email: '', password: '' })
+                  setFormData({ email: '', first_name: '', password: '' })
                 }}
-                className="toggle-btn"
               >
-                {isLogin ? 'Registre-se' : 'Entre'}
+                {isLogin ? 'Registrar' : 'Fazer Login'}
               </button>
             </p>
           </div>
