@@ -2,7 +2,7 @@ import { useState } from 'react'
 import axios from 'axios'
 import './Login.css'
 
-function Login({ onLoginSuccess }) {
+function Login({ onLoginSuccess, apiBaseUrl = 'http://127.0.0.1:8000/api/' }) {
   const [isLogin, setIsLogin] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -43,8 +43,8 @@ function Login({ onLoginSuccess }) {
 
     try {
       const endpoint = isLogin 
-        ? 'http://127.0.0.1:8000/api/auth/login/'
-        : 'http://127.0.0.1:8000/api/auth/register/'
+        ? `${apiBaseUrl}auth/login/`
+        : `${apiBaseUrl}auth/register/`
 
       const payload = isLogin 
         ? { email: formData.email, password: formData.password }

@@ -146,7 +146,7 @@ function App() {
   }
 
   if (!token) {
-    return <Login onLoginSuccess={handleLoginSuccess} />
+    return <Login onLoginSuccess={handleLoginSuccess} apiBaseUrl={API_BASE_URL} />
   }
 
   const tarefasPendentes = tarefas.filter(t => !t.concluida)
