@@ -12,9 +12,13 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 import os
 from pathlib import Path
-from dotenv import load_dotenv
 
-load_dotenv()
+# Load environment variables
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -30,8 +34,13 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-cz1e$1x(*pv2b*q%d%a%wb21*i
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
 # Render compatibility
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
-if os.getenv('RENDER', False):
+ALLOWED_HOSTS = []
+if os.getenv('ALLOWED_HOSTS'):
+    ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS').split(',')
+else:
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+
+if os.getenv('RENDER'):
     ALLOWED_HOSTS.append('.onrender.com')
 
 
