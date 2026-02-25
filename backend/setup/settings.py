@@ -72,13 +72,31 @@ MIDDLEWARE = [
 ]
 
 # CORS Configuration
-CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:5174,http://127.0.0.1:5174').split(',')
-if not DEBUG:
-    # In production, add Render frontend URL if available
+CORS_ALLOWED_ORIGINS_DEFAULT = [
+    'http://localhost:5174',
+    'http://127.0.0.1:5174',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+]
+
+if os.getenv('CORS_ALLOWED_ORIGINS'):
+    CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS').split(',')
+    # Strip whitespace from each URL
+    CORS_ALLOWED_ORIGINS = [url.strip() for url in CORS_ALLOWED_ORIGINS]
+else:
+    CORS_ALLOWED_ORIGINS = CORS_ALLOWED_ORIGINS_DEFAULT
+
+# In production, add Render frontend URLs
+if os.getenv('RENDER'):
     frontend_url = os.getenv('FRONTEND_URL')
-    if frontend_url:
+    if frontend_url and frontend_url not in CORS_ALLOWED_ORIGINS:
         CORS_ALLOWED_ORIGINS.append(frontend_url)
-    # Security settings for production
+    # Add .onrender.com domain
+    if 'https://agenda-de-tarefas-1.onrender.com' not in CORS_ALLOWED_ORIGINS:
+        CORS_ALLOWED_ORIGINS.append('https://agenda-de-tarefas-1.onrender.com')
+
+# Security settings for production
+if not DEBUG:
     SECURE_SSL_REDIRECT = False
     CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
 ROOT_URLCONF = 'setup.urls'
