@@ -1,10 +1,23 @@
 # Render Deployment Guide
 
+## Order of Deployment (A ordem é importante!)
+
+```
+1️⃣ Deploy Backend (Python/Django)
+   ↓
+2️⃣ Pegar a URL do backend (ex: https://agenda-tarefas-api.onrender.com)
+   ↓
+3️⃣ Deploy Frontend (React/Vite) COM a URL do backend
+```
+
+---
+
 ## Deployment Steps
 
 ### 1. Create Backend Service on Render
 
 1. Go to [https://dashboard.render.com](https://dashboard.render.com)
+
 2. Click "New +" button → Select "Web Service"
 3. Connect your GitHub repository: https://github.com/Mylena18/agenda-de-tarefas.git
 4. Select branch: `main`
@@ -25,20 +38,34 @@
 
 #### Environment Variables:
 
-Click "Advanced" → "Add Environment Variable" and add:
+Click "Advanced" → "Add Environment Variable" and add each one:
 
-```
-DEBUG=False
-SECRET_KEY=<generate-strong-secret-key-here>
-ALLOWED_HOSTS=<your-app-name>.onrender.com
-RENDER=True
-CORS_ALLOWED_ORIGINS=https://<your-frontend-url>.onrender.com,https://<your-frontend-domain>
-FRONTEND_URL=https://<your-frontend-url>
-```
-
-To generate a strong SECRET_KEY, run:
+**PASSO 1: Gerar SECRET_KEY**
+Execute este comando no seu terminal local:
 ```bash
 python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+```
+Vai retornar algo como: `k-mp5c8_1ay2!^1rv=hx5@z8vp#6_1$o@$j+@^&f$@$1j1xvz`
+
+**PASSO 2: Adicionar cada variável no Render**
+
+| Variável | Valor Exato |
+|----------|-------------|
+| `DEBUG` | `False` |
+| `SECRET_KEY` | Cole a chave gerada (ex: `k-mp5c8_1ay2!^1rv=hx5@z8vp#6_1$o@$j+@^&f$@$1j1xvz`) |
+| `ALLOWED_HOSTS` | `agenda-tarefas-api.onrender.com` (substitua `agenda-tarefas-api` pelo nome que você colocou no serviço) |
+| `RENDER` | `True` |
+| `CORS_ALLOWED_ORIGINS` | `https://agenda-tarefas-web.onrender.com` (substitua `agenda-tarefas-web` pelo nome do frontend) |
+| `FRONTEND_URL` | `https://agenda-tarefas-web.onrender.com` (mesmo valor do CORS_ALLOWED_ORIGINS) |
+
+**EXEMPLO COMPLETO (com nomes):**
+```
+DEBUG=False
+SECRET_KEY=k-mp5c8_1ay2!^1rv=hx5@z8vp#6_1$o@$j+@^&f$@$1j1xvz
+ALLOWED_HOSTS=agenda-tarefas-api.onrender.com
+RENDER=True
+CORS_ALLOWED_ORIGINS=https://agenda-tarefas-web.onrender.com
+FRONTEND_URL=https://agenda-tarefas-web.onrender.com
 ```
 
 ### 2. Create Frontend Service on Render
@@ -58,8 +85,9 @@ python -c "from django.core.management.utils import get_random_secret_key; print
 
 4. Add Environment Variable:
    ```
-   VITE_API_BASE_URL=https://<your-app-name>.onrender.com/api/
+   VITE_API_BASE_URL=https://agenda-tarefas-api.onrender.com/api/
    ```
+   (substitua `agenda-tarefas-api` pelo nome do seu backend)
 
 #### Option B: Deploy to Netlify/Vercel (Alternative)
 
@@ -77,35 +105,45 @@ If you prefer separate deployments:
 After deploying the backend, test:
 
 ```bash
-# Get your backend URL from Render dashboard (e.g., https://agenda-tarefas-api.onrender.com)
+# Exemplo com a URL real do seu backend
+# Se seu backend se chama "agenda-tarefas-api", a URL será:
+# https://agenda-tarefas-api.onrender.com
 
-# Test authentication endpoint
-curl -X POST https://<your-backend-url>/api/auth/register/ \
+# Test authentication endpoint - Registrar novo usuário
+curl -X POST https://agenda-tarefas-api.onrender.com/api/auth/register/ \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "test@example.com",
-    "password": "test1234"
+    "email": "seu-email@example.com",
+    "password": "sua-senha123"
   }'
 
-# Test login
-curl -X POST https://<your-backend-url>/api/auth/login/ \
+# Test login - Fazer login
+curl -X POST https://agenda-tarefas-api.onrender.com/api/auth/login/ \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "test@example.com",
-    "password": "test1234"
+    "email": "seu-email@example.com",
+    "password": "sua-senha123"
   }'
+
+# Se retornar um "token", está funcionando!
 ```
 
 ### 4. Update Frontend API URL
 
-After backend is deployed, update your Render frontend service:
+**Importante: Só faça isso DEPOIS que o backend for deployado com sucesso!**
 
-1. Go to "Environment" tab
-2. Update `VITE_API_BASE_URL` to your backend URL:
+1. Você vai saber a URL do backend quando terminar o deploy no Render
+   - Exemplo: `https://agenda-tarefas-api.onrender.com`
+
+2. Go to your Frontend Static Site on Render → "Environment" tab
+
+3. Update ou adicione a variável:
    ```
-   VITE_API_BASE_URL=https://<your-backend-url>/api/
+   VITE_API_BASE_URL=https://agenda-tarefas-api.onrender.com/api/
    ```
-3. Trigger a redeploy
+   (substitua `agenda-tarefas-api` pelo nome real do seu backend)
+
+4. Click "Redeploy" para atualizar o frontend
 
 ## Important Notes
 
@@ -147,3 +185,29 @@ View logs in Render dashboard:
 **API 500 errors**: Check backend logs in Render dashboard
 
 **Frontend not connecting**: Verify `VITE_API_BASE_URL` environment variable is set correctly
+
+---
+
+## Quick Reference (Referência Rápida)
+
+**Se você colocou os nomes assim:**
+- Backend service name: `agenda-tarefas-api`
+- Frontend service name: `agenda-tarefas-web`
+
+**As URLs ficarão:**
+- Backend: `https://agenda-tarefas-api.onrender.com`
+- Frontend: `https://agenda-tarefas-web.onrender.com`
+
+**As variáveis de ambiente ficarão:**
+```
+🔵 BACKEND (Web Service):
+DEBUG=False
+SECRET_KEY=<sua-chave-gerada>
+ALLOWED_HOSTS=agenda-tarefas-api.onrender.com
+RENDER=True
+CORS_ALLOWED_ORIGINS=https://agenda-tarefas-web.onrender.com
+FRONTEND_URL=https://agenda-tarefas-web.onrender.com
+
+🟢 FRONTEND (Static Site):
+VITE_API_BASE_URL=https://agenda-tarefas-api.onrender.com/api/
+```
